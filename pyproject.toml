@@ -37,7 +37,7 @@ dev = [
 storagetieriq = "storagetieriq.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/nazarovh018e-ux/Cost-Optimized-Storage-Tiering-Strategy"
+Homepage = "https://github.com/nazarovh018e-ux/storagetieriq"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,6 +1,6 @@
-# StorageTierIQ — Cost-Optimized Storage Tiering System
+# storagetieriq
 
-![CI](https://github.com/nazarovh018e-ux/Cost-Optimized-Storage-Tiering-Strategy/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/nazarovh018e-ux/storagetieriq/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
