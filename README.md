@@ -1,5 +1,21 @@
 # storagetieriq
 
+## The problem
+
+Most organizations keep the majority of their data on fast, expensive,
+energy-hungry SSD — even data no one has touched in months. Industry
+research (IDC and others) shows that **60–80% of enterprise data is "cold"**:
+rarely or never accessed. We pay premium prices, and burn premium
+electricity, to store data nobody uses.
+
+## What StorageTierIQ does
+
+StorageTierIQ analyzes **real access patterns** and assigns every file to the
+storage tier (HOT / WARM / COLD) that minimizes its true expected cost — then
+reports both the **money saved** and the **CO₂ avoided**. It is validated on
+**real Amazon S3 data** with live server access logs, not synthetic
+assumptions.
+
 ![CI](https://github.com/nazarovh018e-ux/storagetieriq/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
