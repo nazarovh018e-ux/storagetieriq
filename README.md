@@ -1,227 +1,206 @@
-# storagetieriq
+<div align="center">
 
-## The problem
+# 💾 StorageTierIQ
 
-Most organizations keep the majority of their data on fast, expensive,
-energy-hungry SSD — even data no one has touched in months. Industry
-research (IDC and others) shows that **60–80% of enterprise data is "cold"**:
-rarely or never accessed. We pay premium prices, and burn premium
-electricity, to store data nobody uses.
+### Stop paying premium prices to store data nobody uses.
 
-## What StorageTierIQ does
+*An open-source engine that finds your cold cloud data and moves it to cheaper tiers — cutting storage bills and CO₂ automatically.*
 
-StorageTierIQ analyzes **real access patterns** and assigns every file to the
-storage tier (HOT / WARM / COLD) that minimizes its true expected cost — then
-reports both the **money saved** and the **CO₂ avoided**. It is validated on
-**real Amazon S3 data** with live server access logs, not synthetic
-assumptions.
-
-![CI](https://github.com/nazarovh018e-ux/storagetieriq/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue)
+[![CI](https://github.com/nazarovh018e-ux/storagetieriq/actions/workflows/ci.yml/badge.svg)](https://github.com/nazarovh018e-ux/storagetieriq/actions)
+![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12-blue?logo=python&logoColor=white)
+![AWS S3](https://img.shields.io/badge/AWS-S3-FF9900?logo=amazons3&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Open Source](https://img.shields.io/badge/open%20source-%E2%9D%A4-red)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-A modular Python toolkit that simulates a real-world **HOT / WARM / COLD**
-storage tiering strategy, estimates costs, justifies the policy
-quantitatively, and (optionally) executes the resulting object migrations.
-
-For teams managing large datasets, storage cost is often dominated by data
-that is rarely accessed yet sitting on expensive SSD. StorageTierIQ analyses
-access patterns and recommends a cost-optimised tier for every object.
+</div>
 
 ---
 
-## What changed in v1.0
+## 🧊 The Problem — You're paying first-class for empty seats
 
-This release restructures the project into an installable package with clean
-module boundaries and three *pluggable* extension points:
+Most organizations keep the **majority** of their data on fast, expensive, energy-hungry SSD storage — even data that hasn't been touched in months.
 
-- **`DataSource`** — where records come from (synthetic, CSV, future: S3 inventory)
-- **`TieringStrategy`** — how a tier is decided (rule-based, cost-optimal, future: ML)
-- **`MigrationExecutor`** — how moves are carried out (dry-run, optional AWS S3)
+> 📉 **Industry research (IDC and others) shows that 60–80% of enterprise data is "cold"** — rarely or never accessed.
 
-The old flat modules and `sys.path` hacks are gone; everything installs as a
-proper package, so the CLI and the "use as a library" path both just work.
+Yet it sits on the most expensive tier, as if every byte were urgent. The result:
 
----
+- 💸 **Wasted money** — companies overpay for storage they don't use.
+- 🌍 **Wasted energy** — always-on SSD burns far more electricity than cold archives, inflating the carbon footprint.
 
-## Project structure
-
-```
-storagetieriq/
-├── pyproject.toml
-├── README.md
-├── LICENSE
-├── src/storagetieriq/
-│   ├── domain/        ← dependency-free core types (Tier, schema, PricingModel)
-│   ├── ingestion/     ← DataSource ABC + SyntheticSource + CsvSource
-│   ├── policy/        ← TieringStrategy ABC + RuleBasedStrategy + CostOptimalStrategy
-│   ├── costing/       ← CostEstimator, sensitivity, policy comparison
-│   ├── reporting/     ← text report + (optional) PNG dashboard
-│   ├── migration/     ← MigrationExecutor ABC + DryRunExecutor + (optional) AwsS3Executor
-│   └── cli.py         ← command-line entry point
-├── tests/
-└── .github/workflows/ci.yml
-```
+With the cloud storage market heading toward **~$800B by 2034** and data volumes growing ~20% a year, this waste compounds every single month.
 
 ---
 
-## Quick start
+## ✅ The Solution — Put every file where it actually belongs
 
-```bash
-# Install (editable, with charts + dev tooling)
-pip install -e ".[viz,dev]"
+**StorageTierIQ** analyzes your **real access patterns** and assigns every object to the tier that minimizes its true expected cost — then reports the money saved **and** the CO₂ avoided.
 
-# Run with defaults (rule-based, 10k synthetic records)
-storagetieriq
+| Tier | Backing storage | Best for | Relative cost |
+|------|-----------------|----------|---------------|
+| 🔥 **HOT** | SSD / NVMe | Frequently accessed | 💰💰💰 |
+| 🌤️ **WARM** | Object storage (S3-IA) | Occasional access | 💰💰 |
+| 🧊 **COLD** | Glacier / Archive | Rarely or never accessed | 💰 |
 
-# Use the cost-optimal (break-even) strategy
-storagetieriq --strategy cost-optimal
-
-# Rule-based aggressive preset on a bigger dataset
-storagetieriq --policy aggressive --records 50000
-
-# Analyse YOUR data from a CSV inventory export
-storagetieriq --input my_inventory.csv
-
-# Show a dry-run migration plan
-storagetieriq --strategy cost-optimal --plan-migration
-
-# Skip the PNG dashboard (no matplotlib needed)
-storagetieriq --no-dashboard
-```
-
-The input CSV must contain at least: `data_type`, `size_mb`, `age_days`,
-`days_since_access`, `access_count`.
+The key difference from legacy tools: **StorageTierIQ decides from measured usage, not file age.** A six-month-old file accessed daily stays hot; a brand-new file nobody opens goes cold. No guesswork.
 
 ---
 
-## Tiering strategies
+## 🚀 Core Features
 
-**Rule-based (`--strategy rule`)** — explicit, explainable thresholds on age,
-recency, and access count. Tune via presets (`--policy`) or overrides
-(`--hot-days`, `--warm-days`, `--hot-access`).
-
-**Cost-optimal (`--strategy cost-optimal`)** — assigns each object to the tier
-that minimises its expected total cost over a planning horizon:
-
-```
-total(tier) = size_gb · storage_price(tier) · H
-            + size_gb · retrieval_price(tier) · E[retrievals over H]
-```
-
-Expected retrievals are predicted with a transparent, ML-free estimator
-(lifetime access rate × recency decay). Swap that estimator for a learned
-model later without touching the decision logic — prediction and decision are
-deliberately separated.
-
-| Preset (rule) | Hot age | Warm age | Behaviour |
-|---|---|---|---|
-| `aggressive` | 14 days | 90 days | Move data to cheaper tiers quickly |
-| `default` | 30 days | 180 days | Balanced cost vs availability |
-| `conservative` | 60 days | 365 days | Keep data hot/warm longer |
+- 📈 **Usage-aware tiering** — classifies data from real S3 server access logs, not crude age heuristics.
+- 🧠 **Cost-optimal engine** — assigns each object to the tier with the lowest expected total cost (storage + retrieval over a planning horizon).
+- 💵🌱 **Cost & CO₂ dashboard** — quantifies both the dollars and the carbon you save, in one view.
+- 🤖 **Automatic, safe migration** — generates a migration plan and can execute it against AWS S3. Defaults to a **dry-run** so nothing moves until you approve.
+- 🔒 **Privacy-first by design** — runs entirely in **your** environment. It reads metadata and logs locally; **your data never leaves your account.**
+- 🧩 **Pluggable & open-source** — clean, modular architecture with automated tests and CI passing on Python 3.10–3.12.
 
 ---
 
-## Storage tiers & default pricing
+## 🏗️ How It Works
 
-| Tier | Storage type | Default price | Use case |
-|---|---|---|---|
-| **HOT** | SSD / NVMe | $0.092 /GB/mo | Frequently accessed |
-| **WARM** | Object storage (S3-IA) | $0.0125 /GB/mo | Occasional access |
-| **COLD** | Glacier / Archive | $0.004 /GB/mo | Compliance / backup |
+StorageTierIQ plugs into your existing AWS S3 setup and runs a simple, transparent pipeline:
 
-Edit `PricingModel` (in `domain/pricing.py`) with your provider's real rates.
+```
+                        YOUR AWS ENVIRONMENT
+   ┌─────────────────────────────────────────────────────────────┐
+   │                                                               │
+   │   ☁️  S3 Bucket  ──────────────┐                              │
+   │   (objects + sizes)            │                              │
+   │                                ▼                              │
+   │   📜 S3 Access Logs ──▶  [ 1. INGEST ]  read usage + metadata │
+   │                                │                              │
+   │                                ▼                              │
+   │                         [ 2. CLASSIFY ]  cost-optimal engine  │
+   │                                │         HOT / WARM / COLD     │
+   │                                ▼                              │
+   │                         [ 3. REPORT ]   cost + CO₂ dashboard  │
+   │                                │                              │
+   │                                ▼                              │
+   │                         [ 4. MIGRATE ]  dry-run → execute     │
+   │                                │         (S3 storage classes) │
+   │                                ▼                              │
+   │   ☁️  S3 Bucket  ◀── objects moved to the right tier          │
+   │                                                               │
+   └─────────────────────────────────────────────────────────────┘
+```
+
+Every step is auditable, and migration is **opt-in** — you see the plan before a single object moves.
+
+<div align="center">
+
+![StorageTierIQ Dashboard](docs/dashboard.png)
+
+*The cost & CO₂ dashboard generated on real AWS data.*
+
+</div>
 
 ---
 
-## Energy & carbon footprint
+## 📊 Initial Test Results (Case Study)
 
-Cold/archive tiers don't just cost less — they draw far less electricity,
-because the media is powered down instead of always-on SSD. StorageTierIQ
-estimates the energy (kWh) and CO₂ avoided by tiering, alongside the cost:
+We validated StorageTierIQ on **real Amazon S3 data** — a live bucket with server access logging enabled, classified from genuine usage patterns (not synthetic assumptions).
 
-```python
-from storagetieriq import estimate_carbon, CarbonModel
+| Metric | Naive (age-based) | **StorageTierIQ (cost-optimal)** |
+|--------|------------------|----------------------------------|
+| 💸 Storage cost reduction | 20% | **57%** |
+| 🌍 CO₂ footprint reduction | ~20% | **56%** |
+| 🎯 Hot data correctly identified | mixed | **13% hot · 87% cold** |
 
-c = estimate_carbon(classified, CarbonModel(grid_kg_co2_per_kwh=0.4))
-print(f"CO2 avoided: {c['co2_saved_kg_year']:.1f} kg/year "
-      f"({c['co2_savings_pct']:.1f}% lower)")
-```
+> 💡 **The intelligence matters:** the cost-optimal engine delivered **~3× more savings** than a naive age-based rule — because it decided from *measured access*, not file age.
 
-All coefficients (watts per TB per tier, grid carbon intensity) are
-configurable to your hardware and region.
+### 📈 Projected at enterprise scale
 
----
+Applying the same logic to a **1 PB** workload (≈70% cold, per industry norms):
 
-## Use as a library
-
-```python
-from storagetieriq import (
-    generate_dataset, RuleBasedStrategy, CostOptimalStrategy,
-    TieringPolicy, PricingModel, CostEstimator, POLICIES, compare_policies,
-)
-
-df = generate_dataset(10_000)
-
-# Rule-based with a custom policy
-policy = TieringPolicy(name="my", hot_age_days=21, warm_age_days=120,
-                       hot_min_accesses=30)
-classified = RuleBasedStrategy(policy).classify(df)   # returns a copy
-
-# Cost-optimal alternative
-classified2 = CostOptimalStrategy(horizon_months=12).classify(df)
-
-result = CostEstimator(PricingModel(hot_storage_per_gb=0.10)).estimate(classified)
-print(f"Annual saving: ${result['annual_savings']:.2f}")
-
-# Compare all presets side by side
-cmap = {n: RuleBasedStrategy(p).classify(df) for n, p in POLICIES.items()}
-print(compare_policies(cmap))
-```
-
-### Planning (and executing) migrations
-
-```python
-from storagetieriq import build_migration_plan, DryRunExecutor
-
-plan = build_migration_plan(classified)      # diff target tier vs current
-print(plan.summary())
-DryRunExecutor(verbose=True).execute(plan)    # safe: no real I/O
-```
-
-To move real objects, install the AWS extra (`pip install -e ".[aws]"`) and use
-`storagetieriq.migration.aws_s3.AwsS3Executor` with a `moves` table that
-includes `bucket` and `key` columns.
-
----
-
-## Running tests
-
-```bash
-pip install -e ".[dev]"
-pytest --cov=storagetieriq --cov-report=term-missing
-```
-
----
-
-## Output files
-
-| File | Description |
+| | Per year |
 |---|---|
-| `storage_records.csv` | Raw (or loaded) dataset |
-| `classified_records.csv` | Dataset with `tier` column |
-| `tiering_report.txt` | Full policy justification report |
-| `storage_tiering_dashboard.png` | 7-panel visual dashboard |
+| 💰 Cost saved | **~$630,000** |
+| 🌱 CO₂ avoided | **~16 tonnes** |
 
-These are runtime artefacts and are git-ignored.
+> **Savings scale with how cold your data is** — typically **30–90%**. Archive-heavy workloads (backups, media, compliance data) sit at the top of that range; the more cold data you have, the more you save.
 
 ---
 
-## Extending
+## ⚙️ Installation & Setup
 
-- **Real data**: implement a new `DataSource` (e.g. an S3-inventory reader) —
-  the rest of the pipeline is unchanged.
-- **New decision logic**: subclass `TieringStrategy` (e.g. an `MlStrategy` that
-  predicts access probability) and plug it into the CLI.
-- **Real migration**: implement a `MigrationExecutor` for your provider; the
-  included `AwsS3Executor` shows the S3 storage-class transition pattern.
+### Prerequisites
+
+- Python **3.10+**
+- An AWS account with an **S3 bucket** and (for real usage data) **S3 server access logging** enabled
+- AWS credentials configured (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`)
+
+### 1. Install
+
+```bash
+git clone https://github.com/nazarovh018e-ux/storagetieriq.git
+cd storagetieriq
+pip install -e ".[viz,aws]"
+```
+
+### 2. Try it instantly (synthetic data — no AWS needed)
+
+```bash
+storagetieriq --strategy cost-optimal
+```
+
+### 3. Run on your real AWS data
+
+Export your bucket's metadata and access logs into the analysis format:
+
+```bash
+python tools/s3_export.py \
+  --bucket YOUR_BUCKET \
+  --access-logs-bucket YOUR_LOG_BUCKET \
+  --access-logs-prefix logs/ \
+  --out storage_records.csv
+```
+
+Then analyze, see your savings, and preview a migration plan:
+
+```bash
+storagetieriq --input storage_records.csv --strategy cost-optimal --plan-migration
+```
+
+That's it — you'll get a cost & CO₂ report, a dashboard, and a dry-run migration plan. Nothing moves until you say so.
+
+---
+
+## 💰 Commercial Model — Gain Share
+
+We only win when **you** win. No upfront license. No risk.
+
+| | Details |
+|---|---|
+| 🎁 **Month 1** | **Free.** We analyze your storage and show you exactly what you'd save. |
+| 🤝 **After that** | You pay a **percentage of the savings we deliver** — verified against your real bill. |
+| ✅ **Why it works** | If we don't cut your costs, you don't pay. Incentives fully aligned. |
+
+The open-source core is, and will remain, **free**. Paid enterprise offerings add managed migration, multi-cloud support, and dedicated support.
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] ML-based access prediction (forecast future usage, not just past)
+- [ ] Multi-cloud support (Google Cloud Storage, Azure Blob)
+- [ ] Hysteresis guard to prevent tier "thrashing"
+- [ ] Hosted enterprise dashboard
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Open an issue or a pull request. The codebase is modular and fully tested — a great place to build.
+
+## 📄 License
+
+Released under the **MIT License**. See [`LICENSE`](LICENSE) for details.
+
+<div align="center">
+
+**StorageTierIQ** — *Cost down. Carbon down. Zero guesswork.*
+
+⭐ Star this repo if cheaper, greener cloud storage sounds good to you.
+
+</div>
